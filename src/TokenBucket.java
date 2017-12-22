@@ -1,3 +1,6 @@
+import java.util.concurrent.atomic.*;
+
+
 /**
  * A Token Bucket (https://en.wikipedia.org/wiki/Token_bucket)
  *
@@ -10,25 +13,36 @@
  * - terminated(): return true if the bucket is terminated, false otherwise
  *
  */
-class TokenBucket {
 
-    TokenBucket() {
-        //TODO
+public class TokenBucket {
+
+    private AtomicLong m_NumOfTokens;
+    private AtomicBoolean m_terminated;
+
+    public TokenBucket() {
+        m_NumOfTokens.set(0);
+        m_terminated.set(false);
     }
 
-    void take(long tokens) {
-        //TODO
+    public synchronized void take(long tokens) {
+        //TODO: how to do that without busy wait??
+        while (m_NumOfTokens.get() - tokens < 0) {}
+        m_NumOfTokens.addAndGet(-tokens);
     }
 
-    void terminate() {
-        //TODO
+    public void terminate() {
+        m_terminated.getAndSet(true);
     }
 
-    boolean terminated() {
-        //TODO
+    public boolean terminated() {
+        return m_terminated.get();
     }
 
-    void set(long tokens) {
-        //TODO
+    public void set(long tokens) {
+        m_NumOfTokens.getAndSet(tokens);
+    }
+
+    public void add(long tokens){
+        m_NumOfTokens.getAndAdd(tokens);
     }
 }
