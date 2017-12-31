@@ -14,15 +14,15 @@ class Chunk {
         this.size_in_bytes = size_in_bytes;
     }
 
-    byte[] getData() {
+    public byte[] getData() {
         return data;
     }
 
-    long getOffset() {
+    public long getOffset() {
         return offset;
     }
 
-    int getSize_in_bytes() {
+    public int getSize_in_bytes() {
         return size_in_bytes;
     }
 }

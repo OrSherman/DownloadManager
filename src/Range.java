@@ -10,15 +10,15 @@ class Range {
         this.end = end;
     }
 
-    Long getStart() {
+    public Long getStart() {
         return start;
     }
 
-    Long getEnd() {
+    public Long getEnd() {
         return end;
     }
 
-    Long getLength() {
+    public Long getLength() {
         return end - start + 1;
     }
 }

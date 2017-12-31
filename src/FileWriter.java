@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -12,13 +13,26 @@ public class FileWriter implements Runnable {
     private final BlockingQueue<Chunk> chunkQueue;
     private DownloadableMetadata downloadableMetadata;
 
-    FileWriter(DownloadableMetadata downloadableMetadata, BlockingQueue<Chunk> chunkQueue) {
+    public FileWriter(DownloadableMetadata downloadableMetadata, BlockingQueue<Chunk> chunkQueue) {
         this.chunkQueue = chunkQueue;
         this.downloadableMetadata = downloadableMetadata;
     }
 
     private void writeChunks() throws IOException {
         //TODO
+        RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
+        Chunk chunk;
+        while(!chunkQueue.isEmpty()){ //TODO: what if the chunk queue is temporarily empty
+            try {
+                chunk = chunkQueue.take();
+                file.write(chunk.getData(), (int) chunk.getOffset(),chunk.getSize_in_bytes());
+               // downloadableMetadata.addRange(); TODO: how to get the right range??
+            }catch (InterruptedException e){
+                System.err.println(e);
+            }
+
+
+        }
     }
 
     @Override

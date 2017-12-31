@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.net.*;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -15,7 +16,7 @@ public class HTTPRangeGetter implements Runnable {
     private final BlockingQueue<Chunk> outQueue;
     private TokenBucket tokenBucket;
 
-    HTTPRangeGetter(
+    public HTTPRangeGetter(
             String url,
             Range range,
             BlockingQueue<Chunk> outQueue,
@@ -28,6 +29,9 @@ public class HTTPRangeGetter implements Runnable {
 
     private void downloadRange() throws IOException, InterruptedException {
         //TODO
+        URL u = new URL(url);
+        HttpURLConnection h = (HttpURLConnection) u.openConnection();
+
     }
 
     @Override
