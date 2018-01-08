@@ -22,17 +22,18 @@ public class FileWriter implements Runnable {
         //TODO
         RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
         Chunk chunk;
-        while(!chunkQueue.isEmpty()){ //TODO: what if the chunk queue is temporarily empty
-            try {
-                chunk = chunkQueue.take();
-                file.write(chunk.getData(), (int) chunk.getOffset(),chunk.getSize_in_bytes());
-               // downloadableMetadata.addRange(); TODO: how to get the right range??
-            }catch (InterruptedException e){
-                System.err.println(e);
-            }
-
-
+        try {
+        while((chunk = chunkQueue.take()).getSize_in_bytes() != -1){
+            file.write(chunk.getData(), (int) chunk.getOffset(),chunk.getSize_in_bytes());
         }
+        }catch (InterruptedException e){
+            System.err.println(e);
+        }
+
+        writeMetaData(); //TODO: decide if here or in idcdm
+    }
+
+    private void writeMetaData() {
     }
 
     @Override

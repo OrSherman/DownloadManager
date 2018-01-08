@@ -48,6 +48,8 @@ public class IdcDm {
         DownloadableMetadata metaData = initMetaData();
         LinkedBlockingQueue<Chunk> chunkQueue = new LinkedBlockingQueue<Chunk>();
         FileWriter fileWriter = new FileWriter(metaData, chunkQueue);
+        Thread fileWriterThread = new Thread(fileWriter);
+        fileWriterThread.start();
         Range currRange;
         Thread[] httpRangeGettersThreads = new Thread[numberOfWorkers];
 
@@ -61,15 +63,51 @@ public class IdcDm {
             Long start = currRange.getStart();
             Long end = currRange.getStart() + length;
 
-            for(Thread httpRangeGettersThread : httpRangeGettersThreads){
+            for(int i = 0; i < httpRangeGettersThreads.length; i++){
                 Range subRange = new Range(start,end);
-                httpRangeGettersThread = new Thread(new HTTPRangeGetter(metaData.getUrl(),subRange,chunkQueue,tokenBucket));
-                httpRangeGettersThread.start();
-                
+                httpRangeGettersThreads[i] = new Thread(new HTTPRangeGetter(metaData.getUrl(),subRange,chunkQueue,tokenBucket));
+                httpRangeGettersThreads[i].start();
+                if((i != httpRangeGettersThreads.length -1) || reminder == 0){
+                    start = end + 1;
+                    end = start + length;
+                }else{
+                    start = end + 1;
+                    end = start + reminder;
+                }
             }
 
+            for(Thread httpRangeGettersThread : httpRangeGettersThreads){
+                try {
+                    httpRangeGettersThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace(); //TODO: print err msg
+                }
+            }
+
+            chunkQueue.add(null); //TODO: send finish mark to the queue
+            tokenBucket.terminate();
+            try {
+                fileWriterThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace(); //TODO: print err msg
+            }
+
+            try {
+                rateLimiterThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace(); //TODO: print err msg
+            }
+        printPercentage();
         }
 
+        System.out.println("download succeeded!! :)");
+        metaData.delete();
+
+    }
+
+    private static void printPercentage() {
+        //TODO: implement!!
+        System.out.println(":(");
     }
 
     private static DownloadableMetadata initMetaData(){

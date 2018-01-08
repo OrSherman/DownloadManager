@@ -1,3 +1,4 @@
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.BlockingQueue;
@@ -28,10 +29,43 @@ public class HTTPRangeGetter implements Runnable {
     }
 
     private void downloadRange() throws IOException, InterruptedException {
-        //TODO
-        URL u = new URL(url);
-        HttpURLConnection h = (HttpURLConnection) u.openConnection();
+        URL fileUrl = new URL(url);
+        HttpURLConnection httpURLConnection = (HttpURLConnection) fileUrl.openConnection();
+        checkResponseCode(httpURLConnection); //TODO: is it needed?? why throw Exception?
+        httpURLConnection.setRequestProperty("Range", "bytes="+range.getStart() +"-"+range.getEnd());
+        httpURLConnection.setConnectTimeout(CONNECT_TIMEOUT);
+        httpURLConnection.setReadTimeout(READ_TIMEOUT);
+        httpURLConnection.connect();
 
+        if(tokenBucket != null){
+            tokenBucket.take(CHUNK_SIZE);
+        }else{
+            throw  new IOException("Token bucket is null!");
+        }
+
+        BufferedInputStream  dataInputStream = new  BufferedInputStream(httpURLConnection.getInputStream());
+        streamToChunkQueue(dataInputStream);
+        dataInputStream.close();
+
+
+    }
+
+    private void streamToChunkQueue(BufferedInputStream i_DataInputStream) throws IOException {
+        byte data[] = new byte[CHUNK_SIZE];
+        int numOfBytesRead = 0;
+        long offset = range.getStart();
+
+        while ((numOfBytesRead = i_DataInputStream.read(data, 0, CHUNK_SIZE)) != -1)
+        {
+            outQueue.add(new Chunk(data, offset, numOfBytesRead));
+            offset += numOfBytesRead;
+        }
+    }
+
+    private void checkResponseCode(HttpURLConnection httpURLConnection) throws IOException {
+        if (httpURLConnection.getResponseCode() / 100 != 2) {
+            throw new IOException("bad response code");
+        }
     }
 
     @Override
@@ -41,6 +75,7 @@ public class HTTPRangeGetter implements Runnable {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             //TODO
+            System.err.println("Download range "+ this.range +" failed");
         }
     }
 }
