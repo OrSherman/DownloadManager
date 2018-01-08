@@ -15,7 +15,8 @@ public class DownloadableMetadata {
     private TreeSet<Range> m_WritenRanges;
     private static final int k_RangeSize = 1024;
     private static final long k_FileSize = 10000000; //TODO: get real file size
-   public DownloadableMetadata(String url) {
+
+    public DownloadableMetadata(String url) {
         this.url = url;
         this.filename = getName(url);
         this.metadataFilename = getMetadataName(filename);
@@ -72,7 +73,8 @@ public class DownloadableMetadata {
     public Range getMissingRange() {
         //TODO
        // Range firstRange = m_WritenRanges.;
-    }
+        return null;
+}
 
     public String getUrl() {
         return url;
