@@ -31,7 +31,7 @@ public class DownloadableMetadata implements Serializable {
         this.metadataFilename = getMetadataName(filename);
         m_WritenRanges = new TreeSet<>();
         k_FileSize = calcFileSize(url);
-        this.missingRange = new Range((long) 0, k_FileSize);
+        this.missingRange = new Range((long) 0, Math.min(k_RangeSize , k_FileSize) - 1);
 
         //TODO
     }
@@ -48,7 +48,9 @@ public class DownloadableMetadata implements Serializable {
 
     public void addRange(Range i_Range) {
         Long newMissingRangeStart  = i_Range.getEnd() + 1;
-        this.missingRange = new Range(newMissingRangeStart, k_FileSize);
+        Long missingRangeFullRangeEnd = i_Range.getEnd() + 1 + k_RangeSize;
+        Long newMissingRangeEnd = k_FileSize < missingRangeFullRangeEnd ? k_FileSize : missingRangeFullRangeEnd
+        this.missingRange = new Range(newMissingRangeStart, newMissingRangeEnd);
     }
 
 
@@ -60,7 +62,7 @@ public class DownloadableMetadata implements Serializable {
     }
 
     public boolean isCompleted() {
-        return missingRange.getLength() == 0;
+        return missingRange.getLength() < 1;
     }
 
     public void delete() {
