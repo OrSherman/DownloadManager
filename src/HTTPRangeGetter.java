@@ -78,9 +78,9 @@ public class HTTPRangeGetter implements Runnable {
         try {
             this.downloadRange();
         } catch (IOException | InterruptedException e) {
+            outQueue.add(new Chunk(null, (long)-1, 0));
             e.printStackTrace();
-            //TODO
-            System.err.println("Download range "+ this.range +" failed \n trying again:");
+            System.err.println("Download range "+ this.range +" failed");
 
         }
     }

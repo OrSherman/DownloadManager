@@ -22,18 +22,31 @@ public class FileWriter implements Runnable {
         RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
         Chunk chunk;
         try {
-        while((chunk = chunkQueue.take()).getSize_in_bytes() != -1){
-            file.seek(chunk.getOffset());
-            file.write(chunk.getData(), 0, chunk.getSize_in_bytes());
-        }
+            while(!isRangeFinished(chunk = chunkQueue.take())){
+                // if one of the current range chunk's failed, stop writing and don't mark the range as written.
+                if(isChunkFailed(chunk)){
+                    file.close();
+                    return;
+                }
+
+                file.seek(chunk.getOffset());
+                file.write(chunk.getData(), 0, chunk.getSize_in_bytes());
+            }
         }catch (InterruptedException e){
             System.err.println("file write failed..."+ e);
         }
 
-       downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
+        downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
+        downloadableMetadata.addRange(downloadableMetadata.getMissingRange());
     }
 
+    private boolean isRangeFinished(Chunk i_Chunk){
+        return i_Chunk.getSize_in_bytes() == -1;
+    }
 
+    private boolean isChunkFailed(Chunk i_Chunk){
+        return i_Chunk.getOffset() == -1;
+    }
 
     @Override
     public void run() {
