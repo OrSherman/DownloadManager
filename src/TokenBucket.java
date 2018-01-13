@@ -20,15 +20,18 @@ public class TokenBucket {
     private AtomicBoolean m_terminated;
     private Semaphore m_Semaphore;
     public TokenBucket() {
-        m_NumOfTokens.set(0);
-        m_terminated.set(false);
+        m_NumOfTokens = new AtomicLong(0);
+        m_terminated= new AtomicBoolean(false);
         m_Semaphore = new Semaphore(1);
     }
 
     public synchronized void take(long tokens) {
         if(m_NumOfTokens.get() - tokens < 0) {
             try {
-                m_Semaphore.wait();
+                synchronized (m_Semaphore){
+                    m_Semaphore.wait();
+                }
+
             }catch (InterruptedException e){
                 System.err.println(e.getCause());
             }
@@ -47,12 +50,16 @@ public class TokenBucket {
 
     public void set(long tokens) {
         m_NumOfTokens.getAndSet(tokens);
-        m_Semaphore.notify();
+        synchronized (m_Semaphore) {
+            m_Semaphore.notify();
+        }
     }
 
     public void add(long tokens){
         m_NumOfTokens.getAndAdd(tokens);
-        m_Semaphore.notify();
+        synchronized (m_Semaphore) {
+            m_Semaphore.notify();
+        }
     }
 
     private synchronized void notifyAvailableTokens(){

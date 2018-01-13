@@ -25,6 +25,17 @@ public class Range implements Serializable, Comparable<Range> {
         return end - start + 1;
     }
 
+    @Override
+    public boolean 	equals(Object obj){
+        boolean isEqual = false;
+        Range inputRange = (Range) obj;
+
+        if(inputRange != null && inputRange.getStart() == this.getStart() && inputRange.getEnd() == this.getEnd()){
+            isEqual = true;
+        }
+
+        return isEqual;
+    }
 
     @Override
     public int compareTo(Range i_Range) {

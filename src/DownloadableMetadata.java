@@ -1,5 +1,10 @@
 import java.util.*;
 import java.io.*;
+import java.nio.file.*;
+import java.net.*;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+
 /**
  * Describes a file's metadata: URL, file name, size, and which parts already downloaded to disk.
  *
@@ -14,14 +19,15 @@ public class DownloadableMetadata implements Serializable {
     private String filename;
     private String url;
     private TreeSet<Range> m_WritenRanges;
-    private static final long k_RangeSize = 1024;
-    private static final long k_FileSize = 10000000; //TODO: get real file size
+    private static final long k_RangeSize = 1000000;
+    private long k_FileSize;
 
     public DownloadableMetadata(String url) {
         this.url = url;
         this.filename = getName(url);
         this.metadataFilename = getMetadataName(filename);
-         m_WritenRanges = new TreeSet<>();
+        m_WritenRanges = new TreeSet<>();
+        k_FileSize = calcFileSize(url);
         //TODO
     }
 
@@ -40,12 +46,12 @@ public class DownloadableMetadata implements Serializable {
         Range prevRange = getPrevRange(i_Range);
         Range nextRange = getNextRange(i_Range);
 
-        if(m_WritenRanges.contains(prevRange)){
+        if(prevRange != null && prevRange.getEnd() + 1 == currRange.getStart()){
             m_WritenRanges.remove(prevRange);
             currRange = new Range(prevRange.getStart(), currRange.getEnd());
         }
 
-        if(m_WritenRanges.contains(nextRange)){
+        if(nextRange != null && nextRange.getStart() - 1 == currRange.getEnd()){
             m_WritenRanges.remove(nextRange);
             currRange = new Range(currRange.getStart(), nextRange.getEnd());
         }
@@ -53,12 +59,14 @@ public class DownloadableMetadata implements Serializable {
         m_WritenRanges.add(currRange);
     }
 
+
+
     private Range getPrevRange(Range i_Range){
-       return new Range(i_Range.getStart()- k_RangeSize, i_Range.getStart()-1);
+        return m_WritenRanges.lower(i_Range);
     }
 
     private Range getNextRange(Range i_Range){
-        return new Range(i_Range.getEnd()+1, i_Range.getEnd() + k_RangeSize);
+        return m_WritenRanges.higher(i_Range);
     }
 
     public String getFilename() {
@@ -66,7 +74,8 @@ public class DownloadableMetadata implements Serializable {
     }
 
     public boolean isCompleted() {
-        return (m_WritenRanges.size() == 1) && m_WritenRanges.contains(new Range((long)0, k_FileSize));
+        boolean completed = (m_WritenRanges.size() == 1) && m_WritenRanges.first().getLength() == k_FileSize;
+        return completed;
     }
 
     public void delete() {
@@ -78,18 +87,19 @@ public class DownloadableMetadata implements Serializable {
 
         if(!isCompleted()) {
             missingRange = new Range((long) 0, k_RangeSize);
-            Range firstRange = m_WritenRanges.first();
+            Range firstRange = m_WritenRanges.size() == 0 ? null : m_WritenRanges.first();
             if (firstRange != null && firstRange.getStart() == 0) {
                 long rangeSize = Math.min(k_RangeSize, k_FileSize - (firstRange.getEnd() + 1)); //TODO: bug??
                 missingRange = new Range(firstRange.getEnd() + 1, firstRange.getEnd() + 1 + rangeSize);
             }
-        }
 
-        this.addRange(missingRange);
+            this.addRange(missingRange);
+        }
 
         return missingRange;
     }
-    public void saveMetadataToDick() throws IOException {
+
+    public void SaveMetadataToDisc() throws IOException {
         File metadataTempFile = new File(metadataFilename + ".temp");
         File metadataFile = new File(metadataFilename);
         FileOutputStream metaDataTempStream = new FileOutputStream(metadataTempFile);
@@ -97,18 +107,73 @@ public class DownloadableMetadata implements Serializable {
 
         try {
             objectOutputStream.writeObject(this);
-            if(!metadataTempFile.renameTo(metadataFile)){
-                throw new IOException("Could not rename file!");
+//TODO: do it right
+            if (metadataFile.exists()) {
+                metadataFile.delete();
             }
+            metadataTempFile.renameTo(metadataFile);
+            metadataTempFile.delete();
+          //  Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
+
         } catch (IOException e) {
+            System.err.println("SaveMetadataToDick catch err"); // TODO: change the name
             e.printStackTrace();//TODO: handle errors
         }
         finally { //TODO: use finally on all function
-            metaDataTempStream.close(); 
+            metaDataTempStream.close();
             objectOutputStream.close();
         }
     }
 
+    public static DownloadableMetadata InitMetadata(String url){
+        DownloadableMetadata metadata = new DownloadableMetadata(url);
+        String metadataFilename = metadata.getMetadataName();
+        File metadataFile = new File(metadataFilename);
+
+        if(metadataFile.exists()){
+            try {
+                FileInputStream metadataInputStream = new FileInputStream(metadataFilename);
+                ObjectInputStream objectInputStream = new ObjectInputStream(metadataInputStream);
+                metadata = (DownloadableMetadata) objectInputStream.readObject();
+                objectInputStream.close();
+                metadataInputStream.close();
+
+            } catch (IOException i) {
+                System.err.println("Download failed: load metadta failed");
+            } catch (ClassNotFoundException c) {
+                System.out.println("Download failed: class not found..... :(");
+                c.printStackTrace();
+            }
+
+        }
+
+        return metadata;
+    }
+
+    private long calcFileSize(String i_Url)  {
+        URL url = null;
+        try {
+            url = new URL(i_Url);
+        } catch (MalformedURLException e) {
+            System.err.println("calcFileSize failed...."); //TODO: write real err mag
+            e.printStackTrace();
+        }
+        URLConnection conn = null;
+        try {
+            conn = url.openConnection();
+            if(conn instanceof HttpURLConnection) {
+                ((HttpURLConnection)conn).setRequestMethod("HEAD");
+            }
+            conn.getInputStream();
+            return conn.getContentLength();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(conn instanceof HttpURLConnection) {
+                ((HttpURLConnection)conn).disconnect();
+            }
+        }
+    }
     public String getUrl() {
         return url;
     }

@@ -23,13 +23,14 @@ public class FileWriter implements Runnable {
         Chunk chunk;
         try {
         while((chunk = chunkQueue.take()).getSize_in_bytes() != -1){
-            file.write(chunk.getData(), (int) chunk.getOffset(),chunk.getSize_in_bytes());
+            file.seek(chunk.getOffset());
+            file.write(chunk.getData(), 0, chunk.getSize_in_bytes());
         }
         }catch (InterruptedException e){
-            System.err.println(e);
+            System.err.println("file write failed..."+ e);
         }
 
-       downloadableMetadata.saveMetadataToDick(); //TODO: decide if here or in idcdm
+       downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
     }
 
 

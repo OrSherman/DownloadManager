@@ -18,7 +18,7 @@ public class RateLimiter implements Runnable {
 
     RateLimiter(TokenBucket tokenBucket, Long maxBytesPerSecond) {
         this.tokenBucket = tokenBucket;
-        this.maxBytesPerSecond = maxBytesPerSecond;
+        this.maxBytesPerSecond = maxBytesPerSecond == null ? Long.MAX_VALUE : maxBytesPerSecond;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class RateLimiter implements Runnable {
      * "Hard" rate limiter implementation
      */
     public void run() {
-        while(true) {
+        while(!this.tokenBucket.terminated()) {
             try {
                 this.tokenBucket.set(maxBytesPerSecond);
                 Thread.sleep(1000); // Adding BPS to the token bucket every second
