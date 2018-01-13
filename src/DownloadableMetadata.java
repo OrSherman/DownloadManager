@@ -1,4 +1,5 @@
 import java.util.*;
+import java.io.*;
 /**
  * Describes a file's metadata: URL, file name, size, and which parts already downloaded to disk.
  *
@@ -8,12 +9,12 @@ import java.util.*;
  * CHALLENGE: try to avoid metadata disk footprint of O(n) in the average case
  * HINT: avoid the obvious bitmap solution, and think about ranges...
  */
-public class DownloadableMetadata {
+public class DownloadableMetadata implements Serializable {
     private final String metadataFilename;
     private String filename;
     private String url;
     private TreeSet<Range> m_WritenRanges;
-    private static final int k_RangeSize = 1024;
+    private static final long k_RangeSize = 1024;
     private static final long k_FileSize = 10000000; //TODO: get real file size
 
     public DownloadableMetadata(String url) {
@@ -24,8 +25,10 @@ public class DownloadableMetadata {
         //TODO
     }
 
-    private static String getMetadataName(String filename) {
-        return filename + ".metadata";
+    private static String getMetadataName(String filename) { return filename + ".metadata";}
+
+    public String getMetadataName(){
+        return metadataFilename;
     }
 
     private static String getName(String path) {
@@ -51,11 +54,11 @@ public class DownloadableMetadata {
     }
 
     private Range getPrevRange(Range i_Range){
-       return new Range(i_Range.getStart()- k_RangeSize, i_Range.getStart());
+       return new Range(i_Range.getStart()- k_RangeSize, i_Range.getStart()-1);
     }
 
     private Range getNextRange(Range i_Range){
-        return new Range(i_Range.getEnd(), i_Range.getEnd() + k_RangeSize);
+        return new Range(i_Range.getEnd()+1, i_Range.getEnd() + k_RangeSize);
     }
 
     public String getFilename() {
@@ -71,10 +74,40 @@ public class DownloadableMetadata {
     }
 
     public Range getMissingRange() {
-        //TODO
-       // Range firstRange = m_WritenRanges.;
-        return null;
-}
+        Range missingRange = null;
+
+        if(!isCompleted()) {
+            missingRange = new Range((long) 0, k_RangeSize);
+            Range firstRange = m_WritenRanges.first();
+            if (firstRange != null && firstRange.getStart() == 0) {
+                long rangeSize = Math.min(k_RangeSize, k_FileSize - (firstRange.getEnd() + 1)); //TODO: bug??
+                missingRange = new Range(firstRange.getEnd() + 1, firstRange.getEnd() + 1 + rangeSize);
+            }
+        }
+
+        this.addRange(missingRange);
+
+        return missingRange;
+    }
+    public void saveMetadataToDick() throws IOException {
+        File metadataTempFile = new File(metadataFilename + ".temp");
+        File metadataFile = new File(metadataFilename);
+        FileOutputStream metaDataTempStream = new FileOutputStream(metadataTempFile);
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(metaDataTempStream);
+
+        try {
+            objectOutputStream.writeObject(this);
+            if(!metadataTempFile.renameTo(metadataFile)){
+                throw new IOException("Could not rename file!");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();//TODO: handle errors
+        }
+        finally { //TODO: use finally on all function
+            metaDataTempStream.close(); 
+            objectOutputStream.close();
+        }
+    }
 
     public String getUrl() {
         return url;

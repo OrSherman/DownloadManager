@@ -1,5 +1,4 @@
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -30,11 +29,10 @@ public class FileWriter implements Runnable {
             System.err.println(e);
         }
 
-        writeMetaData(); //TODO: decide if here or in idcdm
+       downloadableMetadata.saveMetadataToDick(); //TODO: decide if here or in idcdm
     }
 
-    private void writeMetaData() {
-    }
+
 
     @Override
     public void run() {

@@ -1,7 +1,10 @@
+import java.io.Serializable;
+import java.util.Comparator;
+
 /**
  * Describes a simple range, with a start, an end, and a length
  */
-class Range {
+public class Range implements Serializable, Comparable<Range> {
     private Long start;
     private Long end;
 
@@ -20,5 +23,11 @@ class Range {
 
     public Long getLength() {
         return end - start + 1;
+    }
+
+
+    @Override
+    public int compareTo(Range i_Range) {
+        return Long.signum(this.getStart() - i_Range.getStart());
     }
 }
