@@ -1,3 +1,5 @@
+import com.sun.org.apache.bcel.internal.generic.NEW;
+
 import java.util.*;
 import java.io.*;
 import java.nio.file.*;
@@ -21,6 +23,7 @@ public class DownloadableMetadata implements Serializable {
     private TreeSet<Range> m_WritenRanges;
     private static final long k_RangeSize = 1000000;
     private long k_FileSize;
+    private Range missingRange;
 
     public DownloadableMetadata(String url) {
         this.url = url;
@@ -28,6 +31,8 @@ public class DownloadableMetadata implements Serializable {
         this.metadataFilename = getMetadataName(filename);
         m_WritenRanges = new TreeSet<>();
         k_FileSize = calcFileSize(url);
+        this.missingRange = new Range((long) 0, k_FileSize);
+
         //TODO
     }
 
@@ -42,61 +47,33 @@ public class DownloadableMetadata implements Serializable {
     }
 
     public void addRange(Range i_Range) {
-        Range currRange = i_Range;
-        Range prevRange = getPrevRange(i_Range);
-        Range nextRange = getNextRange(i_Range);
-
-        if(prevRange != null && prevRange.getEnd() + 1 == currRange.getStart()){
-            m_WritenRanges.remove(prevRange);
-            currRange = new Range(prevRange.getStart(), currRange.getEnd());
-        }
-
-        if(nextRange != null && nextRange.getStart() - 1 == currRange.getEnd()){
-            m_WritenRanges.remove(nextRange);
-            currRange = new Range(currRange.getStart(), nextRange.getEnd());
-        }
-
-        m_WritenRanges.add(currRange);
+        Long newMissingRangeStart  = i_Range.getEnd() + 1;
+        this.missingRange = new Range(newMissingRangeStart, k_FileSize);
     }
 
 
 
-    private Range getPrevRange(Range i_Range){
-        return m_WritenRanges.lower(i_Range);
-    }
 
-    private Range getNextRange(Range i_Range){
-        return m_WritenRanges.higher(i_Range);
-    }
 
     public String getFilename() {
         return filename;
     }
 
     public boolean isCompleted() {
-        boolean completed = (m_WritenRanges.size() == 1) && m_WritenRanges.first().getLength() == k_FileSize;
-        return completed;
+        return missingRange.getLength() == 0;
     }
 
     public void delete() {
-        //TODO
+        try{
+        File metadataFile = new File(metadataFilename);
+        metadataFile.delete();}
+        catch (Exception e) {
+            System.err.println("Deleting metadata file failed");
+        }
     }
 
     public Range getMissingRange() {
-        Range missingRange = null;
-
-        if(!isCompleted()) {
-            missingRange = new Range((long) 0, k_RangeSize);
-            Range firstRange = m_WritenRanges.size() == 0 ? null : m_WritenRanges.first();
-            if (firstRange != null && firstRange.getStart() == 0) {
-                long rangeSize = Math.min(k_RangeSize, k_FileSize - (firstRange.getEnd() + 1)); //TODO: bug??
-                missingRange = new Range(firstRange.getEnd() + 1, firstRange.getEnd() + 1 + rangeSize);
-            }
-
-            this.addRange(missingRange);
-        }
-
-        return missingRange;
+        return this.missingRange;
     }
 
     public void SaveMetadataToDisc() throws IOException {
