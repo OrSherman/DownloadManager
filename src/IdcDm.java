@@ -1,7 +1,7 @@
 import java.util.concurrent.*;
 
 public class IdcDm {
-
+    private static int percentageDownloaded = -1;
     /**
      * Receive arguments from the command-line, provide some feedback and start the download.
      *
@@ -51,7 +51,9 @@ public class IdcDm {
         Range currRange;
         Thread[] httpRangeGettersThreads = new Thread[numberOfWorkers];
 
-        while((currRange = metaData.getMissingRange()) != null){
+        while(!metaData.isCompleted()){
+            currRange = metaData.getMissingRange();
+            printPercentage(currRange.getEnd(), metaData.getFileSize());
             Thread fileWriterThread = new Thread(fileWriter);
             fileWriterThread.start();
             TokenBucket tokenBucket = new TokenBucket();
@@ -98,7 +100,7 @@ public class IdcDm {
                 e.printStackTrace(); //TODO: print err msg
             }
 
-        printPercentage();
+            chunkQueue.clear();
         }
 
         System.out.println("download succeeded!! :)");
@@ -106,10 +108,13 @@ public class IdcDm {
 
     }
 
-    private static void printPercentage() {
-        //TODO: implement!!
-        System.out.println(":(");
+    private static void printPercentage(long i_sizeDownloaded, long i_FileSize) {
+        double partialDownloaded =  ((double)i_sizeDownloaded / (double) i_FileSize);
+        double currentPercentageDownloaded =  partialDownloaded * 100;
+        if ((int)currentPercentageDownloaded != percentageDownloaded) {
+            percentageDownloaded = (int)currentPercentageDownloaded;
+            System.out.println(percentageDownloaded + "%");
+        }
+
     }
-
-
 }

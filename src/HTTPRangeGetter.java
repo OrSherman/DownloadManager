@@ -28,7 +28,7 @@ public class HTTPRangeGetter implements Runnable {
         this.tokenBucket = tokenBucket;
     }
 
-    private  void  downloadRange() throws IOException, InterruptedException {
+    private  synchronized void  downloadRange() throws IOException, InterruptedException {
         URL fileUrl = new URL(url);
         HttpURLConnection httpURLConnection = (HttpURLConnection) fileUrl.openConnection();
         checkResponseCode(200); //TODO: fix Already connected bug

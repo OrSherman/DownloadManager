@@ -1,5 +1,3 @@
-import com.sun.org.apache.bcel.internal.generic.NEW;
-
 import java.util.*;
 import java.io.*;
 import java.nio.file.*;
@@ -20,7 +18,6 @@ public class DownloadableMetadata implements Serializable {
     private final String metadataFilename;
     private String filename;
     private String url;
-    private TreeSet<Range> m_WritenRanges;
     private static final long k_RangeSize = 1000000;
     private long k_FileSize;
     private Range missingRange;
@@ -29,9 +26,8 @@ public class DownloadableMetadata implements Serializable {
         this.url = url;
         this.filename = getName(url);
         this.metadataFilename = getMetadataName(filename);
-        m_WritenRanges = new TreeSet<>();
         k_FileSize = calcFileSize(url);
-        this.missingRange = new Range((long) 0, Math.min(k_RangeSize , k_FileSize) - 1);
+        this.missingRange = new Range((long) 0, Math.min(k_RangeSize , k_FileSize) - 1); //TODO: change start to 0
 
         //TODO
     }
@@ -48,14 +44,10 @@ public class DownloadableMetadata implements Serializable {
 
     public void addRange(Range i_Range) {
         Long newMissingRangeStart  = i_Range.getEnd() + 1;
-        Long missingRangeFullRangeEnd = i_Range.getEnd() + 1 + k_RangeSize;
-        Long newMissingRangeEnd = k_FileSize < missingRangeFullRangeEnd ? k_FileSize : missingRangeFullRangeEnd
+        Long missingRangeFullRangeEnd = i_Range.getEnd() + k_RangeSize;
+        Long newMissingRangeEnd = k_FileSize < missingRangeFullRangeEnd ? k_FileSize - 1 : missingRangeFullRangeEnd;
         this.missingRange = new Range(newMissingRangeStart, newMissingRangeEnd);
     }
-
-
-
-
 
     public String getFilename() {
         return filename;
@@ -67,8 +59,8 @@ public class DownloadableMetadata implements Serializable {
 
     public void delete() {
         try{
-        File metadataFile = new File(metadataFilename);
-        metadataFile.delete();}
+            File metadataFile = new File(metadataFilename);
+            metadataFile.delete();}
         catch (Exception e) {
             System.err.println("Deleting metadata file failed");
         }
@@ -78,29 +70,42 @@ public class DownloadableMetadata implements Serializable {
         return this.missingRange;
     }
 
-    public void SaveMetadataToDisc() throws IOException {
-        File metadataTempFile = new File(metadataFilename + ".temp");
-        File metadataFile = new File(metadataFilename);
-        FileOutputStream metaDataTempStream = new FileOutputStream(metadataTempFile);
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(metaDataTempStream);
+    public void SaveMetadataToDisc()  {
+        FileOutputStream metaDataTempStream = null;
+        ObjectOutputStream objectOutputStream = null;
 
         try {
+            File metadataTempFile = new File(metadataFilename + ".temp");
+            File metadataFile = new File(metadataFilename);
+            metaDataTempStream = new FileOutputStream(metadataTempFile);
+            objectOutputStream = new ObjectOutputStream(metaDataTempStream);
             objectOutputStream.writeObject(this);
 //TODO: do it right
             if (metadataFile.exists()) {
-                metadataFile.delete();
+               // metadataFile.delete();
+                Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
+            }else{
+                metadataTempFile.renameTo(metadataFile);
+                metadataTempFile.delete();
             }
-            metadataTempFile.renameTo(metadataFile);
-            metadataTempFile.delete();
-          //  Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
-
-        } catch (IOException e) {
+//           Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
+        }  catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
             System.err.println("SaveMetadataToDick catch err"); // TODO: change the name
             e.printStackTrace();//TODO: handle errors
         }
         finally { //TODO: use finally on all function
-            metaDataTempStream.close();
-            objectOutputStream.close();
+
+            try {
+                metaDataTempStream.close();
+                objectOutputStream.close();
+            } catch (IOException e) {
+                System.err.println("unable to close metaDataTempStream"); //TODO: give real error mag
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -152,6 +157,10 @@ public class DownloadableMetadata implements Serializable {
                 ((HttpURLConnection)conn).disconnect();
             }
         }
+    }
+
+    public Long getFileSize() {
+        return k_FileSize;
     }
     public String getUrl() {
         return url;

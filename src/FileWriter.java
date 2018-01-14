@@ -22,9 +22,9 @@ public class FileWriter implements Runnable {
         RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
         Chunk chunk;
         try {
-            while(!isRangeFinished(chunk = chunkQueue.take())){
+            while (!isRangeFinished(chunk = chunkQueue.take())) {
                 // if one of the current range chunk's failed, stop writing and don't mark the range as written.
-                if(isChunkFailed(chunk)){
+                if (isChunkFailed(chunk)) {
                     file.close();
                     return;
                 }
@@ -32,12 +32,16 @@ public class FileWriter implements Runnable {
                 file.seek(chunk.getOffset());
                 file.write(chunk.getData(), 0, chunk.getSize_in_bytes());
             }
-        }catch (InterruptedException e){
+
+            downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
+            downloadableMetadata.addRange(downloadableMetadata.getMissingRange());
+        } catch(IOException e){
             System.err.println("file write failed..."+ e);
+        }catch (InterruptedException e){
+            System.err.println("take from chunk..."+ e);
         }
 
-        downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
-        downloadableMetadata.addRange(downloadableMetadata.getMissingRange());
+
     }
 
     private boolean isRangeFinished(Chunk i_Chunk){
@@ -45,7 +49,7 @@ public class FileWriter implements Runnable {
     }
 
     private boolean isChunkFailed(Chunk i_Chunk){
-        return i_Chunk.getOffset() == -1;
+        return i_Chunk.getOffset() == (long)-1;
     }
 
     @Override
@@ -53,6 +57,7 @@ public class FileWriter implements Runnable {
         try {
             this.writeChunks();
         } catch (IOException e) {
+            System.err.println("write chunks failed");
             e.printStackTrace();
             //TODO
         }
