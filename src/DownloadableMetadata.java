@@ -81,14 +81,14 @@ public class DownloadableMetadata implements Serializable {
             objectOutputStream = new ObjectOutputStream(metaDataTempStream);
             objectOutputStream.writeObject(this);
 //TODO: do it right
-            if (metadataFile.exists()) {
-               // metadataFile.delete();
-                Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
-            }else{
-                metadataTempFile.renameTo(metadataFile);
-                metadataTempFile.delete();
-            }
-//           Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
+//            if (metadataFile.exists()) {
+//               // metadataFile.delete();
+//                Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
+//            }else{
+//                metadataTempFile.renameTo(metadataFile);
+//                metadataTempFile.delete();
+//            }
+           Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
         }  catch (FileNotFoundException e) {
             e.printStackTrace();
         }
