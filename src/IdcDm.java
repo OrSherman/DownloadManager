@@ -48,64 +48,62 @@ public class IdcDm {
         DownloadableMetadata metaData = DownloadableMetadata.InitMetadata(url);
         LinkedBlockingQueue<Chunk> chunkQueue = new LinkedBlockingQueue<Chunk>();
         FileWriter fileWriter = new FileWriter(metaData, chunkQueue);
-        Range currRange;
         Thread[] httpRangeGettersThreads = new Thread[numberOfWorkers];
+        printPercentage(0,metaData.getFileSize());
 
         while(!metaData.isCompleted()){
-            currRange = metaData.getMissingRange();
-            printPercentage(currRange.getEnd(), metaData.getFileSize());
-            Thread fileWriterThread = new Thread(fileWriter);
-            fileWriterThread.start();
+            Range currRange = metaData.getMissingRange();
             TokenBucket tokenBucket = new TokenBucket();
             RateLimiter rateLimiter = new RateLimiter(tokenBucket,maxBytesPerSecond);
             Thread rateLimiterThread = new Thread(rateLimiter);
-            rateLimiterThread.start();
-            long length = currRange.getLength() / numberOfWorkers;
-            long reminder = currRange.getLength() % numberOfWorkers;
-            Long start = currRange.getStart();
-            Long end = currRange.getStart() + length;
+            Thread fileWriterThread = new Thread(fileWriter);
 
-            for(int i = 0; i < httpRangeGettersThreads.length; i++){
-                Range subRange = new Range(start,end);
-                httpRangeGettersThreads[i] = new Thread(new HTTPRangeGetter(metaData.getUrl(),subRange,chunkQueue,tokenBucket));
-                httpRangeGettersThreads[i].start();
-                if((i != httpRangeGettersThreads.length -1) || reminder == 0){
-                    start = end + 1;
-                    end = start + length;
-                }else{
-                    start = end + 1;
-                    end = start + reminder;
-                }
-            }
-
-            for(Thread httpRangeGettersThread : httpRangeGettersThreads){
-                try {
-                    httpRangeGettersThread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace(); //TODO: print err msg
-                }
-            }
-
+            startThreads(fileWriterThread, rateLimiterThread);
+            splitRangeToHTTPRangeGetters(httpRangeGettersThreads,currRange, metaData.getUrl(), chunkQueue,tokenBucket);
+            joinThreads(httpRangeGettersThreads);
             chunkQueue.add(new Chunk(null,0,-1));
             tokenBucket.terminate();
-            try {
-                fileWriterThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace(); //TODO: print err msg
-            }
-
-            try {
-                rateLimiterThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace(); //TODO: print err msg
-            }
-
+            joinThreads(fileWriterThread, rateLimiterThread);
             chunkQueue.clear();
+            printPercentage(currRange.getEnd(), metaData.getFileSize());
         }
 
         System.out.println("download succeeded!! :)");
         metaData.delete();
+    }
 
+    private static void joinThreads(Thread... i_Threads) {
+        for(Thread thread : i_Threads){
+            joinThread(thread);
+        }
+    }
+
+    private static void joinThread(Thread i_Thread) {
+        try {
+            i_Thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace(); //TODO: what to do when join failed?
+        }
+    }
+
+    private  static void startThreads(Thread... i_Threads){
+        for(Thread thread : i_Threads){
+            thread.start();
+        }
+    }
+    private static void splitRangeToHTTPRangeGetters(Thread[] i_HttpRangeGettersThreads, Range i_RangeToSplit, String i_Url, BlockingQueue<Chunk> i_ChunkQueue, TokenBucket i_TokenBucket) {
+        long length = i_RangeToSplit.getLength() / i_HttpRangeGettersThreads.length;
+        long reminder = i_RangeToSplit.getLength() % i_HttpRangeGettersThreads.length;
+        Long start = i_RangeToSplit.getStart();
+        Long end = i_RangeToSplit.getStart() + length;
+
+        for(int i = 0; i < i_HttpRangeGettersThreads.length; i++){
+            Range subRange = new Range(start,end);
+            i_HttpRangeGettersThreads[i] = new Thread(new HTTPRangeGetter(i_Url,subRange,i_ChunkQueue,i_TokenBucket));
+            i_HttpRangeGettersThreads[i].start();
+            start = end + 1;
+            end = ((i != i_HttpRangeGettersThreads.length -1) || (reminder == 0)) ? start + length : start + reminder;
+        }
     }
 
     private static void printPercentage(long i_sizeDownloaded, long i_FileSize) {

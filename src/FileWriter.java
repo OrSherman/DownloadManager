@@ -18,9 +18,9 @@ public class FileWriter implements Runnable {
     }
 
     private void writeChunks() throws IOException {
-        //TODO
         RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
         Chunk chunk;
+
         try {
             while (!isRangeFinished(chunk = chunkQueue.take())) {
                 // if one of the current range chunk's failed, stop writing and don't mark the range as written.
@@ -29,20 +29,23 @@ public class FileWriter implements Runnable {
                     return;
                 }
 
-                file.seek(chunk.getOffset());
-                file.write(chunk.getData(), 0, chunk.getSize_in_bytes());
+                writeChunkToFile(file, chunk);
             }
-
-            downloadableMetadata.SaveMetadataToDisc(); //TODO: decide if here or in idcdm
+            // notify the metadata that the current range was written.
             downloadableMetadata.addRange(downloadableMetadata.getMissingRange());
-        } catch(IOException e){
-            System.err.println("file write failed..."+ e);
-        }catch (InterruptedException e){
-            System.err.println("take from chunk..."+ e);
+            // after writing all the range to the dick, save it to the metadata file.
+            downloadableMetadata.SaveMetadataToDisc();
+
+        } catch (InterruptedException e){
+            System.err.println("take from chunk failed"+ e); //TODO: handle the exception.
         }
-
-
     }
+
+    private void writeChunkToFile(RandomAccessFile i_File, Chunk i_Chunk) throws IOException {
+        i_File.seek(i_Chunk.getOffset());
+        i_File.write(i_Chunk.getData(), 0, i_Chunk.getSize_in_bytes());
+    }
+
 
     private boolean isRangeFinished(Chunk i_Chunk){
         return i_Chunk.getSize_in_bytes() == -1;
@@ -57,9 +60,8 @@ public class FileWriter implements Runnable {
         try {
             this.writeChunks();
         } catch (IOException e) {
-            System.err.println("write chunks failed");
-            e.printStackTrace();
-            //TODO
+            System.err.println("file write failed..."+ e); //TODO: handle the exception
+
         }
     }
 }
