@@ -120,7 +120,7 @@ public class IdcDm {
         double currentPercentageDownloaded =  partialDownloaded * 100;
         if ((int)currentPercentageDownloaded != percentageDownloaded) {
             percentageDownloaded = (int)currentPercentageDownloaded;
-            System.out.println(percentageDownloaded + "%");
+            System.err.println("Downloaded " + percentageDownloaded + "%");
         }
 
     }

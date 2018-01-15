@@ -39,11 +39,7 @@ public class HTTPRangeGetter implements Runnable {
         httpURLConnection.setReadTimeout(READ_TIMEOUT);
 
 
-        if(tokenBucket != null){
-            tokenBucket.take(CHUNK_SIZE);
-        }else{
-            throw  new IOException("Token bucket is null, Download failed");
-        }
+
 
         httpURLConnection.connect();
 
@@ -55,17 +51,26 @@ public class HTTPRangeGetter implements Runnable {
 
     }
 
-
+    private void takeChunk() throws IOException {
+        if(tokenBucket != null){
+            tokenBucket.take(CHUNK_SIZE);
+        }else{
+            throw  new IOException("Token bucket is null, Download failed");
+        }
+    }
 
     private void streamToChunkQueue(BufferedInputStream i_DataInputStream) throws IOException {
         byte data[] = new byte[CHUNK_SIZE];
         int numOfBytesRead = 0;
         long offset = range.getStart();
 
+        takeChunk();
         while ((numOfBytesRead = i_DataInputStream.read(data, 0, CHUNK_SIZE)) != -1)
         {
             outQueue.add(new Chunk(data, offset, numOfBytesRead));
             offset += numOfBytesRead;
+            takeChunk();
+
         }
     }
 
@@ -77,7 +82,7 @@ public class HTTPRangeGetter implements Runnable {
 
     @Override
     public void run() {
-       while(KEEP_TRYING){
+        while(KEEP_TRYING){
             try {
                 this.downloadRange();
                 break;

@@ -100,26 +100,29 @@ public class DownloadableMetadata implements Serializable {
 //                metadataTempFile.renameTo(metadataFile);
 //                metadataTempFile.delete();
 //            }
+            metaDataTempStream.close();
+            objectOutputStream.close();
             Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             System.err.println("Renaming to the metadata file from the temp failed"); // TODO: change the name
             e.printStackTrace();
-        } finally { //TODO: use finally on all function: or should we just pave this block in each of the catches above?
-
-            try {
-                metaDataTempStream.close();
-                objectOutputStream.close();
-            } catch (IOException e) {
-                System.err.println("Closing the stream 'metaDataTempStream' failed");
-                e.printStackTrace();
-            } catch (NullPointerException e) {
-                System.err.println("Closing the stream 'metaDataTempStream' failed");
-                e.printStackTrace();
-            }
-
         }
+//         finally { //TODO: use finally on all function: or should we just pave this block in each of the catches above?
+//
+//            try {
+//                metaDataTempStream.close();
+//                objectOutputStream.close();
+//            } catch (IOException e) {
+//                System.err.println("Closing the stream 'metaDataTempStream' failed");
+//                e.printStackTrace();
+//            } catch (NullPointerException e) {
+//                System.err.println("Closing the stream 'metaDataTempStream' failed");
+//                e.printStackTrace();
+//            }
+//
+//        }
     }
 
     /**
