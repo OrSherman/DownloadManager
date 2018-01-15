@@ -91,6 +91,15 @@ public class IdcDm {
             thread.start();
         }
     }
+
+    /**
+     * split equally a range to download between all the threads in i_HttpRangeGettersThreads
+     * @param i_HttpRangeGettersThreads
+     * @param i_RangeToSplit
+     * @param i_Url
+     * @param i_ChunkQueue
+     * @param i_TokenBucket
+     */
     private static void splitRangeToHTTPRangeGetters(Thread[] i_HttpRangeGettersThreads, Range i_RangeToSplit, String i_Url, BlockingQueue<Chunk> i_ChunkQueue, TokenBucket i_TokenBucket) {
         long length = i_RangeToSplit.getLength() / i_HttpRangeGettersThreads.length;
         long reminder = i_RangeToSplit.getLength() % i_HttpRangeGettersThreads.length;

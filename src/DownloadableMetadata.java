@@ -171,12 +171,14 @@ public class DownloadableMetadata implements Serializable {
             e.printStackTrace();
             return -1;
         }
+
         URLConnection conn = null;
         try {
             conn = url.openConnection();
             if (conn instanceof HttpURLConnection) {
                 ((HttpURLConnection) conn).setRequestMethod("HEAD");
             }
+
             conn.getInputStream();
             return conn.getContentLength();
         } catch (IOException e) {

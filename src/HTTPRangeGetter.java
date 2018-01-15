@@ -12,6 +12,8 @@ public class HTTPRangeGetter implements Runnable {
     static final int CHUNK_SIZE = 4096;
     private static final int CONNECT_TIMEOUT = 500;
     private static final int READ_TIMEOUT = 2000;
+    // the max num of trials to download a chunk before redownload the whole range.
+    private static final int k_MaxNumOfTries = 5;
     private final String url;
     private final Range range;
     private final BlockingQueue<Chunk> outQueue;
@@ -75,13 +77,20 @@ public class HTTPRangeGetter implements Runnable {
 
     @Override
     public void run() {
-        try {
-            this.downloadRange();
-        } catch (IOException | InterruptedException e) {
-            outQueue.add(new Chunk(null, (long)-1, 0));
-            e.printStackTrace();
-            System.err.println("Download range "+ this.range +" failed");
+        for(int i = 0; i < k_MaxNumOfTries; i++){
+            try {
+                this.downloadRange();
+                break;
+            } catch (IOException | InterruptedException e) {
+                // if we failed the k_MaxNumOfTries time, sand termination signal
+                if(i == k_MaxNumOfTries - 1) {
+                    outQueue.add(new Chunk(null, (long) -1, 0));
+                }
+                e.printStackTrace();
+                System.err.println("Download range "+ this.range +" failed");
 
+            }
         }
+
     }
 }
