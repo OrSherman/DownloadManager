@@ -14,6 +14,8 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
  * HINT: avoid the obvious bitmap solution, and think about ranges...
  */
 public class DownloadableMetadata implements Serializable {
+    //the id of the Serializable in order to avoid warnings
+    private static final long serialVersionUID = 0;
     private final String metadataFilename;
     private String filename;
     private String url;
@@ -86,8 +88,12 @@ public class DownloadableMetadata implements Serializable {
 
         File metadataTempFile = new File(metadataFilename + ".tmp");
         File metadataFile = new File(metadataFilename);
+        FileOutputStream metaDataTempStream = null;
+        ObjectOutputStream objectOutputStream =null;
 
-        try(final FileOutputStream metaDataTempStream = new FileOutputStream(metadataTempFile); final  ObjectOutputStream objectOutputStream = new ObjectOutputStream(metaDataTempStream)) {
+        try{
+            metaDataTempStream = new FileOutputStream(metadataTempFile);
+            objectOutputStream = new ObjectOutputStream(metaDataTempStream);
             objectOutputStream.writeObject(this);
             metaDataTempStream.close();
             objectOutputStream.close();
@@ -96,6 +102,13 @@ public class DownloadableMetadata implements Serializable {
             System.err.println("metadata file not found, continue downloading.");
         } catch (IOException e) {
             System.err.println("Renaming to the metadata file from the .tmp failed");
+        }finally {
+            try {
+                metaDataTempStream.close();
+                objectOutputStream.close();
+            } catch (IOException e) {
+                System.err.println("close metadata files failed. continue downloading.");
+            }
         }
     }
 
