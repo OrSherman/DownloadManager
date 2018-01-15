@@ -40,7 +40,7 @@ public class HTTPRangeGetter implements Runnable {
         if(tokenBucket != null){
             tokenBucket.take(CHUNK_SIZE);
         }else{
-            throw  new IOException("Token bucket is null!");
+            throw  new IOException("Token bucket is null, Download failed");
         }
 
         httpURLConnection.connect();
