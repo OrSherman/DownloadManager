@@ -1,4 +1,3 @@
-import java.util.*;
 import java.io.*;
 import java.nio.file.*;
 import java.net.*;
@@ -18,16 +17,16 @@ public class DownloadableMetadata implements Serializable {
     private final String metadataFilename;
     private String filename;
     private String url;
-    private static final long k_RangeSize = 1000000; // the range size
-    private long k_FileSize; // stores the file's size
+    private static final long RANGE_SIZE = 1000000; // the range size
+    private long FILE_SIZE; // stores the file's size
     private Range missingRange;
 
     public DownloadableMetadata(String url) {
         this.url = url;
         this.filename = getName(url);
         this.metadataFilename = getMetadataName(filename);
-        k_FileSize = calcFileSize(url);
-        this.missingRange = new Range((long) 0, Math.min(k_RangeSize, k_FileSize) - 1); //TODO: change start to 0
+        FILE_SIZE = calcFileSize(url);
+        this.missingRange = new Range((long) 0, Math.min(RANGE_SIZE, FILE_SIZE) - 1); //TODO: change start to 0
 
     }
 
@@ -50,8 +49,8 @@ public class DownloadableMetadata implements Serializable {
      */
     public void addRange(Range i_Range) {
         Long newMissingRangeStart = i_Range.getEnd() + 1;
-        Long missingRangeFullRangeEnd = i_Range.getEnd() + k_RangeSize;
-        Long newMissingRangeEnd = k_FileSize < missingRangeFullRangeEnd ? k_FileSize - 1 : missingRangeFullRangeEnd;
+        Long missingRangeFullRangeEnd = i_Range.getEnd() + RANGE_SIZE;
+        Long newMissingRangeEnd = FILE_SIZE < missingRangeFullRangeEnd ? FILE_SIZE - 1 : missingRangeFullRangeEnd;
         this.missingRange = new Range(newMissingRangeStart, newMissingRangeEnd);
     }
 
@@ -192,7 +191,7 @@ public class DownloadableMetadata implements Serializable {
     }
 
     public Long getFileSize() {
-        return k_FileSize;
+        return FILE_SIZE;
     }
 
     public String getUrl() {
