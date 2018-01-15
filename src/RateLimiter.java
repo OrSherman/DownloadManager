@@ -14,10 +14,12 @@ import java.util.TimerTask;
 public class RateLimiter implements Runnable {
 
     private final TokenBucket tokenBucket;
+    // the number bytes per seconds allowed to use.
     private final Long maxBytesPerSecond;
 
     RateLimiter(TokenBucket tokenBucket, Long maxBytesPerSecond) {
         this.tokenBucket = tokenBucket;
+        // init the max byte per second according to the input or unlimited in case of no input.
         this.maxBytesPerSecond = maxBytesPerSecond == null ? Long.MAX_VALUE : maxBytesPerSecond;
     }
 
@@ -31,9 +33,9 @@ public class RateLimiter implements Runnable {
                 this.tokenBucket.set(maxBytesPerSecond);
                 Thread.sleep(1000); // Adding BPS to the token bucket every second
             } catch (InterruptedException e) {
-                System.err.println("Download failed:" + e);
+                System.err.println("rate limiter failed due to thread sleep error. Download failed");
+                System.exit(-1);
             }
         }
     }
-
-    }
+}

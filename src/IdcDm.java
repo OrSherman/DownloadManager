@@ -46,13 +46,14 @@ public class IdcDm {
      */
     private static void DownloadURL(String url, int numberOfWorkers, Long maxBytesPerSecond) {
         DownloadableMetadata metaData = DownloadableMetadata.InitMetadata(url);
+        numberOfWorkers = metaData.getFileSize() <= HTTPRangeGetter.CHUNK_SIZE ? 1 : numberOfWorkers;
         LinkedBlockingQueue<Chunk> chunkQueue = new LinkedBlockingQueue<Chunk>();
         FileWriter fileWriter = new FileWriter(metaData, chunkQueue);
         Thread[] httpRangeGettersThreads = new Thread[numberOfWorkers];
-        printPercentage(0,metaData.getFileSize());
 
         while(!metaData.isCompleted()){
             Range currRange = metaData.getMissingRange();
+            printPercentage(currRange.getStart(), metaData.getFileSize());
             TokenBucket tokenBucket = new TokenBucket();
             RateLimiter rateLimiter = new RateLimiter(tokenBucket,maxBytesPerSecond);
             Thread rateLimiterThread = new Thread(rateLimiter);
@@ -65,10 +66,9 @@ public class IdcDm {
             tokenBucket.terminate();
             joinThreads(fileWriterThread, rateLimiterThread);
             chunkQueue.clear();
-            printPercentage(currRange.getEnd(), metaData.getFileSize());
         }
 
-        System.out.println("download succeeded!! :)");
+        System.err.println("download succeeded!! :)");
         metaData.delete();
     }
 
@@ -82,7 +82,8 @@ public class IdcDm {
         try {
             i_Thread.join();
         } catch (InterruptedException e) {
-            e.printStackTrace(); //TODO: what to do when join failed?
+            System.err.println("failed to join threads. download failed.");
+            System.exit(-1);
         }
     }
 

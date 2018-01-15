@@ -18,14 +18,11 @@ public class FileWriter implements Runnable {
     }
 
     private void writeChunks() throws IOException {
-        RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw");
         Chunk chunk;
-
-        try {
+        try(final RandomAccessFile file = new RandomAccessFile(downloadableMetadata.getFilename(), "rw")) {
             while (!isRangeFinished(chunk = chunkQueue.take())) {
                 // if one of the current range chunk's failed, stop writing and don't mark the range as written.
                 if (isChunkFailed(chunk)) {
-                    file.close();
                     return;
                 }
 
@@ -37,7 +34,8 @@ public class FileWriter implements Runnable {
             downloadableMetadata.SaveMetadataToDisc();
 
         } catch (InterruptedException e){
-            System.err.println("take from chunk failed"+ e); //TODO: handle the exception.
+            System.err.println("taking from chunk queue failed. download failed");
+            System.exit(-1);
         }
     }
 
@@ -60,8 +58,8 @@ public class FileWriter implements Runnable {
         try {
             this.writeChunks();
         } catch (IOException e) {
-            System.err.println("file write failed..."+ e); //TODO: handle the exception
-
+            System.err.println("could not wirte to file. download failed");
+            System.exit(-1);
         }
     }
 }

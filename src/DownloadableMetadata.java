@@ -70,7 +70,7 @@ public class DownloadableMetadata implements Serializable {
             File metadataFile = new File(metadataFilename);
             metadataFile.delete();
         } catch (Exception e) {
-            System.err.println("Deleting metadata file failed,  the download succeeded");
+            System.err.println("Deleting metadata file failed.");
         }
     }
 
@@ -83,46 +83,20 @@ public class DownloadableMetadata implements Serializable {
      * renames the file to the properly metadata ile name
      */
     public void SaveMetadataToDisc() {
-        FileOutputStream metaDataTempStream = null;
-        ObjectOutputStream objectOutputStream = null;
 
-        try {
-            File metadataTempFile = new File(metadataFilename + ".temp");
-            File metadataFile = new File(metadataFilename);
-            metaDataTempStream = new FileOutputStream(metadataTempFile);
-            objectOutputStream = new ObjectOutputStream(metaDataTempStream);
+        File metadataTempFile = new File(metadataFilename + ".tmp");
+        File metadataFile = new File(metadataFilename);
+
+        try(final FileOutputStream metaDataTempStream = new FileOutputStream(metadataTempFile); final  ObjectOutputStream objectOutputStream = new ObjectOutputStream(metaDataTempStream)) {
             objectOutputStream.writeObject(this);
-//TODO: do it right
-//            if (metadataFile.exists()) {
-//               // metadataFile.delete();
-//                Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
-//            }else{
-//                metadataTempFile.renameTo(metadataFile);
-//                metadataTempFile.delete();
-//            }
             metaDataTempStream.close();
             objectOutputStream.close();
             Files.move(metadataTempFile.toPath(), metadataFile.toPath(), REPLACE_EXISTING);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            System.err.println("metadata file not found, continue downloading.");
         } catch (IOException e) {
-            System.err.println("Renaming to the metadata file from the temp failed"); // TODO: change the name
-            e.printStackTrace();
+            System.err.println("Renaming to the metadata file from the .tmp failed");
         }
-//         finally { //TODO: use finally on all function: or should we just pave this block in each of the catches above?
-//
-//            try {
-//                metaDataTempStream.close();
-//                objectOutputStream.close();
-//            } catch (IOException e) {
-//                System.err.println("Closing the stream 'metaDataTempStream' failed");
-//                e.printStackTrace();
-//            } catch (NullPointerException e) {
-//                System.err.println("Closing the stream 'metaDataTempStream' failed");
-//                e.printStackTrace();
-//            }
-//
-//        }
     }
 
     /**
@@ -147,10 +121,11 @@ public class DownloadableMetadata implements Serializable {
                 metadataInputStream.close();
 
             } catch (IOException i) {
-                System.err.println("IO Exception while trying to load the metadata from file");
+                System.err.println("IO Exception while trying to load the metadata from file. creating a new one.");
+                metadata = new DownloadableMetadata(url);
             } catch (ClassNotFoundException c) {
-                System.out.println("class not found when trying to deserialize");
-                c.printStackTrace();
+                System.out.println("class not found while trying to deserialize. creating a new one.");
+                metadata = new DownloadableMetadata(url);
             }
 
         }
@@ -169,9 +144,8 @@ public class DownloadableMetadata implements Serializable {
         try {
             url = new URL(i_Url);
         } catch (MalformedURLException e) {
-            System.err.println("Calculating file's size failed \n Download failed");
-            e.printStackTrace();
-            return -1;
+            System.err.println("Calculating file's size failed. Download failed");
+            System.exit(-1);
         }
 
         URLConnection conn = null;
@@ -180,12 +154,12 @@ public class DownloadableMetadata implements Serializable {
             if (conn instanceof HttpURLConnection) {
                 ((HttpURLConnection) conn).setRequestMethod("HEAD");
             }
-
             conn.getInputStream();
             return conn.getContentLength();
         } catch (IOException e) {
-            System.err.println("Calculating file's size failed \n Download failed");
-            return -1; // TODO: take care of the case when calculating fails (returns -1)
+            System.err.println("Calculating file's size failed. Download failed");
+            System.exit(-1);
+            return -1;
         } finally {
             if (conn instanceof HttpURLConnection) {
                 ((HttpURLConnection) conn).disconnect();

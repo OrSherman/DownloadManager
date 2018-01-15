@@ -15,10 +15,13 @@ import java.util.concurrent.Semaphore;
  */
 
 public class TokenBucket {
-
+    // the number of tokens in the bucket
     private AtomicLong m_NumOfTokens;
+    // if true the bucket is terminated.
     private AtomicBoolean m_terminated;
     private Semaphore m_Semaphore;
+    private long m_NumOfRequestedTokens;
+
     public TokenBucket() {
         m_NumOfTokens = new AtomicLong(0);
         m_terminated= new AtomicBoolean(false);
@@ -26,15 +29,17 @@ public class TokenBucket {
     }
 
     public synchronized void take(long tokens) {
+        m_NumOfRequestedTokens = tokens;
         if(m_NumOfTokens.get() - tokens < 0) {
-            try {
                 synchronized (m_Semaphore){
-                    m_Semaphore.wait();
+                    try {
+                        m_Semaphore.wait();
+                    } catch (InterruptedException e) {
+                        System.err.println("waiting in token bucket semaphore failed");
+                    }
                 }
 
-            }catch (InterruptedException e){
-                System.err.println(e.getCause());
-            }
+
         }
 
         m_NumOfTokens.addAndGet(-tokens);
@@ -50,19 +55,20 @@ public class TokenBucket {
 
     public void set(long tokens) {
         m_NumOfTokens.getAndSet(tokens);
-        synchronized (m_Semaphore) {
-            m_Semaphore.notify();
-        }
+        notifyAvailableTokens();
+
     }
 
     public void add(long tokens){
         m_NumOfTokens.getAndAdd(tokens);
-        synchronized (m_Semaphore) {
-            m_Semaphore.notify();
-        }
+        notifyAvailableTokens();
     }
 
-    private synchronized void notifyAvailableTokens(){
-
+    private synchronized void notifyAvailableTokens() {
+        if (m_NumOfTokens.get() - m_NumOfRequestedTokens >= 0){
+            synchronized (m_Semaphore) {
+                m_Semaphore.notify();
+            }
+        }
     }
 }
